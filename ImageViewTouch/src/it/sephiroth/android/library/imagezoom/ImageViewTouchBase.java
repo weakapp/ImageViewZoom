@@ -11,7 +11,6 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.widget.ImageView;
 
 /**
@@ -78,10 +77,14 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 			requestLayout();
 		}
 	}
-
+	
 	public void setMinZoom( float value ) {
-		Log.d( LOG_TAG, "minZoom: " + value );
 		mMinZoom = value;
+		
+		int nValue = (int)value;
+		if (nValue == 1.0) {
+			mFitToScreen = false;
+		}
 	}
 
 	@Override
@@ -89,6 +92,7 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 		super.onLayout( changed, left, top, right, bottom );
 		mThisWidth = right - left;
 		mThisHeight = bottom - top;
+		
 		Runnable r = mOnLayoutRunnable;
 		if ( r != null ) {
 			mOnLayoutRunnable = null;
@@ -96,7 +100,11 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 		}
 		if ( getDrawable() != null ) {
 			if ( mFitToScreen ) {
-				getProperBaseMatrix2( getDrawable(), mBaseMatrix );
+				int nCur = (int)getMinZoom();
+				int nValue = 1;
+				if (nCur != nValue) {
+					getProperBaseMatrix2( getDrawable(), mBaseMatrix );
+				}
 				setMinZoom( 1.0f );
 			} else {
 				getProperBaseMatrix( getDrawable(), mBaseMatrix );
@@ -106,7 +114,7 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 			zoomTo( getMinZoom() );
 		}
 	}
-
+	
 	@Override
 	public void setImageBitmap( Bitmap bm ) {
 		setImageBitmap( bm, true );
@@ -294,27 +302,26 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 	 * @param matrix
 	 */
 	protected void getProperBaseMatrix( Drawable drawable, Matrix matrix ) {
-		Log.i( LOG_TAG, "getProperBaseMatrix" );
 		float viewWidth = getWidth();
 		float viewHeight = getHeight();
 		float w = drawable.getIntrinsicWidth();
 		float h = drawable.getIntrinsicHeight();
-		matrix.reset();
 
+		matrix.reset();
+		
 		if ( w > viewWidth || h > viewHeight ) {
 			float widthScale = Math.min( viewWidth / w, 2.0f );
 			float heightScale = Math.min( viewHeight / h, 2.0f );
 			float scale = Math.min( widthScale, heightScale );
-			Log.d( LOG_TAG, "scale: " + scale );
 			matrix.postScale( scale, scale );
 			float tw = ( viewWidth - w * scale ) / 2.0f;
 			float th = ( viewHeight - h * scale ) / 2.0f;
+
 			matrix.postTranslate( tw, th );
 		} else {
 			float tw = ( viewWidth - w ) / 2.0f;
 			float th = ( viewHeight - h ) / 2.0f;
 			matrix.postTranslate( tw, th );
-			Log.d( LOG_TAG, "scale: null" );
 		}
 	}
 
@@ -374,7 +381,6 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 		if ( drawable == null ) return;
 		RectF rect = getCenter( mSuppMatrix, horizontal, vertical );
 		if ( rect.left != 0 || rect.top != 0 ) {
-			Log.d( LOG_TAG, "center.rect: " + rect.left + "x" + rect.top );
 			postTranslate( rect.left, rect.top );
 		}
 	}
@@ -439,7 +445,6 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 		if ( scale > mMaxZoom ) scale = mMaxZoom;
 		float oldScale = getScale();
 		float deltaScale = scale / oldScale;
-		Log.d( LOG_TAG, "zoomTo: " + scale + ", center: " + centerX + "x" + centerY );
 		postScale( deltaScale, centerX, centerY );
 		onZoom( getScale() );
 		center( true, true );

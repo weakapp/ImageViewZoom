@@ -1,6 +1,7 @@
 package it.sephiroth.android.library.imagezoom.graphics;
 
 import java.io.InputStream;
+
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
