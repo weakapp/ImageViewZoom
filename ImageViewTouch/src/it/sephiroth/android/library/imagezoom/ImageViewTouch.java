@@ -19,7 +19,7 @@ public class ImageViewTouch extends ImageViewTouchBase {
 
 	protected ScaleGestureDetector mScaleDetector;
 	protected GestureDetector mGestureDetector;
-	protected int mTouchSlop;
+	protected int mScaledTouchSlop;
 	protected float mCurrentScaleFactor;
 	protected float mScaleFactor;
 	protected int mDoubleTapDirection;
@@ -27,8 +27,41 @@ public class ImageViewTouch extends ImageViewTouchBase {
 	protected OnScaleGestureListener mScaleListener;
 	protected boolean mDoubleTapEnabled = true;
 	protected boolean mScaleEnabled = true;
+	protected boolean mOneHandScaleEnabled = true;
 	protected boolean mScrollEnabled = true;
-	private OnImageViewTouchTapListener mTapListener = null;
+	private OnImageViewTouchListener mTapListener = null;
+
+	/***
+	 * 
+	 * These data are for one hand scale.
+	 * 
+	 */
+
+	/** Current listener mode */
+	private boolean bLastZoomState = false;
+	private boolean bZoomState = false;
+
+	/** Y-coordinate of previously handled touch event */
+	private float mY;
+
+	/** X-coordinate of latest down event */
+	private float mDownX;
+
+	/** Y-coordinate of latest down event */
+	private float mDownY;
+
+	/** Duration in ms before a press turns into a long press */
+	private int mLongPressTimeout;
+
+	private final Runnable mLongPressRunnable = new Runnable() {
+		public void run() {
+			bLastZoomState = true;
+			bZoomState = true;
+			if (mTapListener != null) {
+				mTapListener.onImageScaling(true);
+			}
+		}
+	};
 
 	public ImageViewTouch(Context context, AttributeSet attrs) {
 		super(context, attrs);
@@ -37,7 +70,8 @@ public class ImageViewTouch extends ImageViewTouchBase {
 	@Override
 	protected void init() {
 		super.init();
-		mTouchSlop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
+		mScaledTouchSlop = ViewConfiguration.get(getContext())
+				.getScaledTouchSlop();
 		mGestureListener = getGestureListener();
 		mScaleListener = getScaleListener();
 
@@ -47,9 +81,13 @@ public class ImageViewTouch extends ImageViewTouchBase {
 
 		mCurrentScaleFactor = 1f;
 		mDoubleTapDirection = 1;
+
+		/** Used for one hand scale **/
+		//mLongPressTimeout = ViewConfiguration.getLongPressTimeout();
+		mLongPressTimeout = 300;
 	}
 
-	public void setTapListener(OnImageViewTouchTapListener listener) {
+	public void setTapListener(OnImageViewTouchListener listener) {
 		mTapListener = listener;
 	}
 
@@ -59,6 +97,10 @@ public class ImageViewTouch extends ImageViewTouchBase {
 
 	public void setScaleEnabled(boolean value) {
 		mScaleEnabled = value;
+	}
+
+	public void setOneHandScaleEnabled(boolean value) {
+		mOneHandScaleEnabled = value;
 	}
 
 	public void setScrollEnabled(boolean value) {
@@ -96,17 +138,87 @@ public class ImageViewTouch extends ImageViewTouchBase {
 
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
-		mScaleDetector.onTouchEvent(event);
-		if (!mScaleDetector.isInProgress())
-			mGestureDetector.onTouchEvent(event);
+		if (!bZoomState) {
+			mScaleDetector.onTouchEvent(event);
+			if (!mScaleDetector.isInProgress())
+				mGestureDetector.onTouchEvent(event);
+		}
+
 		int action = event.getAction();
+
+		final float x = event.getX();
+		final float y = event.getY();
+
 		switch (action & MotionEvent.ACTION_MASK) {
+
 		case MotionEvent.ACTION_UP:
 			if (getScale() < getMinZoom()) {
 				zoomTo(getMinZoom(), 50);
 			}
+			if (mOneHandScaleEnabled) {
+				removeCallbacks(mLongPressRunnable);
+				bZoomState = false;
+			}
+			break;
+
+		case MotionEvent.ACTION_DOWN:
+			if (mOneHandScaleEnabled) {
+				postDelayed(mLongPressRunnable, mLongPressTimeout);
+				mDownX = x;
+				mDownY = y;
+				mY = y;
+			}
+			break;
+
+		case MotionEvent.ACTION_MOVE: {
+			if (mOneHandScaleEnabled) {
+				if (mScaleDetector.isInProgress()) {
+					removeCallbacks(mLongPressRunnable);
+
+				} else {
+					final float dy = (y - mY) / getHeight();
+
+					if (bZoomState) {
+						float targetScale = (float) Math.pow(20, -dy)
+								* getScale();
+						zoomTo(targetScale, mDownX, mDownY);
+						mCurrentScaleFactor = Math.min(getMaxZoom(),
+								Math.max(targetScale, getMinZoom() - 1.0f));
+						invalidate();
+					} else {
+						final float scrollX = mDownX - x;
+						final float scrollY = mDownY - y;
+
+						final float dist = (float) Math.sqrt(scrollX * scrollX
+								+ scrollY * scrollY);
+
+						if (dist >= mScaledTouchSlop) {
+							removeCallbacks(mLongPressRunnable);
+						}
+					}
+					mY = y;
+				}
+			}
 			break;
 		}
+
+		default:
+			if (mOneHandScaleEnabled) {
+				removeCallbacks(mLongPressRunnable);
+				bZoomState = false;
+			}
+			break;
+		}
+		
+		if (!bZoomState) {
+			if (bLastZoomState) {
+				bLastZoomState = bZoomState;
+				if (mTapListener != null) {
+					mTapListener.onImageScaling(false);
+				}
+			}
+		}
+		
 		return true;
 	}
 
@@ -129,21 +241,22 @@ public class ImageViewTouch extends ImageViewTouchBase {
 	}
 
 	protected float onDoubleTapPost(float scale, float maxZoom) {
-		if (mDoubleTapDirection == 1) {
-			mDoubleTapDirection = 0;
-			if ((scale + (mScaleFactor * 2)) <= maxZoom) {
-				return scale + mScaleFactor;
-			} else {
-				mDoubleTapDirection = -1;
-				return maxZoom;
-			}
-		} else if (mDoubleTapDirection == 0) {
-			mDoubleTapDirection = 1;
-			return 1f;
-		} else {
-			mDoubleTapDirection = 1;
-			return 1f;
-		}
+		return 1f;
+//		if (mDoubleTapDirection == 1) {
+//			mDoubleTapDirection = 0;
+//			if ((scale + (mScaleFactor * 2)) <= maxZoom) {
+//				return scale + mScaleFactor;
+//			} else {
+//				mDoubleTapDirection = -1;
+//				return maxZoom;
+//			}
+//		} else if (mDoubleTapDirection == 0) {
+//			mDoubleTapDirection = 1;
+//			return 1f;
+//		} else {
+//			mDoubleTapDirection = 1;
+//			return 1f;
+//		}
 	}
 
 	public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX,
@@ -157,8 +270,10 @@ public class ImageViewTouch extends ImageViewTouchBase {
 			return false;
 		if (mScaleDetector.isInProgress())
 			return false;
-		if (getScale() == 1f)
-			return false;
+		
+		/** scale = 1.0f not always means we are not zoom it **/
+//		if (getScale() == 1f)
+//			return false;
 
 		scrollBy(-distanceX, -distanceY);
 		invalidate();
@@ -218,11 +333,11 @@ public class ImageViewTouch extends ImageViewTouchBase {
 		@Override
 		public boolean onDoubleTap(MotionEvent e) {
 			boolean ret = false;
-			
+
 			if (null != mTapListener) {
 				ret = mTapListener.onImageDoubleTap(e);
 			}
-			
+
 			if (!ret) {
 				if (mDoubleTapEnabled) {
 					float scale = getScale();
@@ -241,12 +356,17 @@ public class ImageViewTouch extends ImageViewTouchBase {
 		}
 
 		@Override
-		public boolean onSingleTapUp(MotionEvent e) {	
+		public boolean onSingleTapUp(MotionEvent e) {
+			boolean ret = false;
+			if (mTapListener != null) {
+				ret = mTapListener.onImageSingleTapUp(e);
+				if (ret) {
+					return ret;
+				}
+			}			
 			return super.onSingleTapUp(e);
 		}
 
-		
-		
 		@Override
 		public boolean onSingleTapConfirmed(MotionEvent e) {
 			boolean ret = false;
@@ -285,10 +405,9 @@ public class ImageViewTouch extends ImageViewTouchBase {
 	public class ScaleListener extends
 			ScaleGestureDetector.SimpleOnScaleGestureListener {
 
-		@SuppressWarnings("unused")
 		@Override
 		public boolean onScale(ScaleGestureDetector detector) {
-			float span = detector.getCurrentSpan() - detector.getPreviousSpan();
+			//float span = detector.getCurrentSpan() - detector.getPreviousSpan();
 			float targetScale = mCurrentScaleFactor * detector.getScaleFactor();
 			if (mScaleEnabled) {
 				targetScale = Math.min(getMaxZoom(),
@@ -302,10 +421,31 @@ public class ImageViewTouch extends ImageViewTouchBase {
 			}
 			return false;
 		}
+
+		@Override
+		public boolean onScaleBegin(ScaleGestureDetector detector) {
+			if (mTapListener != null) {
+				mTapListener.onImageScaling(true);
+			}
+			return super.onScaleBegin(detector);
+		}
+
+		@Override
+		public void onScaleEnd(ScaleGestureDetector detector) {
+			super.onScaleEnd(detector);
+			if (mTapListener != null) {
+				mTapListener.onImageScaling(false);
+			}			
+		}
 	}
 
-	public interface OnImageViewTouchTapListener {
-		boolean onImageDoubleTap(MotionEvent e);
-		boolean onImageSingleTapUpConfirm(MotionEvent e);
+	public interface OnImageViewTouchListener {
+		public boolean onImageDoubleTap(MotionEvent e);
+
+		public boolean onImageSingleTapUpConfirm(MotionEvent e);
+		
+		public boolean onImageSingleTapUp(MotionEvent e);
+		
+		public void onImageScaling(boolean bScale);
 	}
 }

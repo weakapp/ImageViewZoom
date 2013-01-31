@@ -21,12 +21,17 @@ import android.widget.ImageView;
  */
 public class ImageViewTouchBase extends ImageView implements IDisposable {
 
+	private static enum IMAGE_ZOOM_TYPE {
+		ZOOM_TYPE_FIT_TO_SCRREN,
+		ZOOM_TYPE_FIT_TO_WIDTH,
+		ZOOM_TYPE_FIT_TO_HEIGHT,
+		ZOOM_TYPE_FILL_TO_SCRREN
+	};
+	
 	public interface OnBitmapChangedListener {
 
 		void onBitmapChanged( Drawable drawable );
 	};
-
-	public static final String LOG_TAG = "image";
 
 	protected static final float MIN_ZOOM = 0.9f;
 	protected Easing mEasing = new Cubic();
@@ -35,13 +40,16 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 	protected Handler mHandler = new Handler();
 	protected Runnable mOnLayoutRunnable = null;
 	protected float mMaxZoom;
-	protected float mMinZoom = -1;
+	protected float mMinZoom = 1.0f;
 	protected final Matrix mDisplayMatrix = new Matrix();
 	protected final float[] mMatrixValues = new float[9];
 	protected int mThisWidth = -1, mThisHeight = -1;
-	protected boolean mFitToScreen = false;
+	//protected boolean mFitToScreen = false;
 	final protected float MAX_ZOOM = 2.0f;
 	final protected int DEFAULT_ANIMATION_DURATION = 200;
+	
+	protected IMAGE_ZOOM_TYPE mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_SCRREN;
+	
 
 	protected RectF mBitmapRect = new RectF();
 	protected RectF mCenterRect = new RectF();
@@ -71,20 +79,37 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 		setImageBitmap( null, true );
 	}
 
-	public void setFitToScreen( boolean value ) {
-		if ( value != mFitToScreen ) {
-			mFitToScreen = value;
+	public void setFitToScreen( ) {
+		if (mImageZoomType != IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_SCRREN) {
+			mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_SCRREN;
 			requestLayout();
 		}
 	}
 	
-	public void setMinZoom( float value ) {
-		mMinZoom = value;
-		
-		int nValue = (int)value;
-		if (nValue == 1.0) {
-			mFitToScreen = false;
+	public void setFitToWidth() {
+		if (mImageZoomType != IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_WIDTH) {
+			mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_WIDTH;
+			requestLayout();
 		}
+	}
+	
+	public void setFitToHeight() {
+		if (mImageZoomType != IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_HEIGHT) {
+			mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_HEIGHT;
+			requestLayout();
+		}
+	}
+	
+	public void setFillScreen() {
+		if (mImageZoomType != IMAGE_ZOOM_TYPE.ZOOM_TYPE_FILL_TO_SCRREN) {
+			mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FILL_TO_SCRREN;
+			requestLayout();
+		}
+	}
+	
+	
+	public void setMinZoom( float value ) {
+		//mMinZoom = value;
 	}
 
 	@Override
@@ -99,19 +124,22 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 			r.run();
 		}
 		if ( getDrawable() != null ) {
-			if ( mFitToScreen ) {
-				int nCur = (int)getMinZoom();
-				int nValue = 1;
-				if (nCur != nValue) {
-					getProperBaseMatrix2( getDrawable(), mBaseMatrix );
-				}
-				setMinZoom( 1.0f );
-			} else {
+//			if ( mFitToScreen ) {
+//				int nCur = (int)getMinZoom();
+//				int nValue = 1;
+//				if (nCur != nValue) {
+//					getProperBaseMatrix2( getDrawable(), mBaseMatrix );
+//				}
+//				setMinZoom( 1.0f );
+//			} else
+			{
 				getProperBaseMatrix( getDrawable(), mBaseMatrix );
-				setMinZoom( getMinZoom() );
+				//setMinZoom( getMinZoom() );
+				setMinZoom( getScale() );
 			}
+
 			setImageMatrix( getImageViewMatrix() );
-			zoomTo( getMinZoom() );
+			zoomTo(getMinZoom());
 		}
 	}
 	
@@ -203,12 +231,14 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 	protected void _setImageDrawable( final Drawable drawable, final boolean reset, final Matrix initial_matrix, final float maxZoom ) {
 
 		if ( drawable != null ) {
-			if ( mFitToScreen ) {
-				getProperBaseMatrix2( drawable, mBaseMatrix );
-				setMinZoom( getScale( mBaseMatrix ) );
-			} else {
+//			if ( mFitToScreen ) {
+//				getProperBaseMatrix2( drawable, mBaseMatrix );
+//				setMinZoom( getScale( mBaseMatrix ) );
+//			} else 
+			{
 				getProperBaseMatrix( drawable, mBaseMatrix );
-				setMinZoom( getMinZoom() );
+				//setMinZoom( getMinZoom() );
+				setMinZoom( getScale( mBaseMatrix ) );
 			}
 			super.setImageDrawable( drawable );
 		} else {
@@ -253,7 +283,8 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 
 		float fw = (float) drawable.getIntrinsicWidth() / (float) mThisWidth;
 		float fh = (float) drawable.getIntrinsicHeight() / (float) mThisHeight;
-		float max = Math.max( fw, fh ) * 4;
+		//float max = Math.max( fw, fh ) * 4;
+		float max = (1.0f / Math.min( fw, fh )) * 4;
 		return max;
 	}
 
@@ -301,55 +332,103 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 	 * @param bitmap
 	 * @param matrix
 	 */
+
 	protected void getProperBaseMatrix( Drawable drawable, Matrix matrix ) {
 		float viewWidth = getWidth();
 		float viewHeight = getHeight();
 		float w = drawable.getIntrinsicWidth();
 		float h = drawable.getIntrinsicHeight();
+		float tw = 0.0f;
+		float th = 0.0f;
 
 		matrix.reset();
 		
-		if ( w > viewWidth || h > viewHeight ) {
-			float widthScale = Math.min( viewWidth / w, 2.0f );
-			float heightScale = Math.min( viewHeight / h, 2.0f );
-			float scale = Math.min( widthScale, heightScale );
-			matrix.postScale( scale, scale );
-			float tw = ( viewWidth - w * scale ) / 2.0f;
-			float th = ( viewHeight - h * scale ) / 2.0f;
-
-			matrix.postTranslate( tw, th );
-		} else {
-			float tw = ( viewWidth - w ) / 2.0f;
-			float th = ( viewHeight - h ) / 2.0f;
-			matrix.postTranslate( tw, th );
+		float widthScale = Math.min( viewWidth / w, mMaxZoom );
+		float heightScale = Math.min( viewHeight / h, mMaxZoom );
+		float scale = 0.0f;
+		
+		switch (mImageZoomType) {
+		case ZOOM_TYPE_FIT_TO_SCRREN:
+			scale = Math.min( widthScale, heightScale );
+			widthScale = scale;
+			heightScale = scale;	
+			break;
+		
+		case ZOOM_TYPE_FIT_TO_WIDTH:
+			heightScale = widthScale;
+			th = ( viewHeight - h * heightScale );
+			break;
+		case ZOOM_TYPE_FIT_TO_HEIGHT:
+			widthScale = heightScale;
+			tw = ( viewWidth - w * widthScale );
+			break;
+	
+		default:
+			break;
 		}
+		matrix.postScale( widthScale, heightScale );		
+		
+//		if ( w > viewWidth || h > viewHeight ) {
+//			float widthScale = Math.min( viewWidth / w, mMaxZoom );
+//			float heightScale = Math.min( viewHeight / h, mMaxZoom );
+//			float scale = 0.0f;
+//			
+//			switch (mImageZoomType) {
+//			case ZOOM_TYPE_FIT_TO_SCRREN:
+//				scale = Math.min( widthScale, heightScale );
+//				widthScale = scale;
+//				heightScale = scale;	
+//				break;
+//			
+//			case ZOOM_TYPE_FIT_TO_WIDTH:
+//				heightScale = widthScale;
+//				th = ( viewHeight - h * heightScale );
+//				break;
+//			case ZOOM_TYPE_FIT_TO_HEIGHT:
+//				widthScale = heightScale;
+//				tw = ( viewWidth - w * widthScale );
+//				break;
+//		
+//			default:
+//				break;
+//			}
+//			matrix.postScale( widthScale, heightScale );
+//
+//		} else {
+//			tw = ( viewWidth - w ) / mMaxZoom;
+//			th = ( viewHeight - h ) / mMaxZoom;
+//		}
+		matrix.postTranslate( tw, th );
 	}
 
 	/**
-	 * Setup the base matrix so that the image is centered and scaled properly.
-	 * 
-	 * @param bitmap
-	 * @param matrix
-	 */
-	protected void getProperBaseMatrix2( Drawable bitmap, Matrix matrix ) {
-		float viewWidth = getWidth();
-		float viewHeight = getHeight();
-		float w = bitmap.getIntrinsicWidth();
-		float h = bitmap.getIntrinsicHeight();
-		matrix.reset();
-		float widthScale = Math.min( viewWidth / w, MAX_ZOOM );
-		float heightScale = Math.min( viewHeight / h, MAX_ZOOM );
-		float scale = Math.min( widthScale, heightScale );
-		matrix.postScale( scale, scale );
-		matrix.postTranslate( ( viewWidth - w * scale ) / MAX_ZOOM, ( viewHeight - h * scale ) / MAX_ZOOM );
-	}
+//	 * Setup the base matrix so that the image is centered and scaled properly.
+//	 * 
+//	 * @param bitmap
+//	 * @param matrix
+//	 */
+//	protected void getProperBaseMatrix2( Drawable bitmap, Matrix matrix ) {
+//		float viewWidth = getWidth();
+//		float viewHeight = getHeight();
+//		float w = bitmap.getIntrinsicWidth();
+//		float h = bitmap.getIntrinsicHeight();
+//
+//		matrix.reset();
+//		float widthScale = Math.min( viewWidth / w, MAX_ZOOM );
+//		float heightScale = Math.min( viewHeight / h, MAX_ZOOM );
+//		float scale = Math.min( widthScale, heightScale );
+//		matrix.postScale( scale, scale );
+//		float tw = ( viewWidth - w * scale ) / MAX_ZOOM;
+//		float th = ( viewHeight - h * scale ) / MAX_ZOOM;		
+//		matrix.postTranslate(tw, th);
+//	}
 
 	protected float getValue( Matrix matrix, int whichValue ) {
 		matrix.getValues( mMatrixValues );
 		return mMatrixValues[whichValue];
 	}
 
-	protected RectF getBitmapRect() {
+	public RectF getBitmapRect() {
 		return getBitmapRect( mSuppMatrix );
 	}
 
@@ -380,6 +459,7 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 
 		if ( drawable == null ) return;
 		RectF rect = getCenter( mSuppMatrix, horizontal, vertical );
+
 		if ( rect.left != 0 || rect.top != 0 ) {
 			postTranslate( rect.left, rect.top );
 		}
@@ -395,6 +475,7 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 		float height = rect.height();
 		float width = rect.width();
 		float deltaX = 0, deltaY = 0;
+
 		if ( vertical ) {
 			int viewHeight = getHeight();
 			if ( height < viewHeight ) {
@@ -440,6 +521,56 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 		float cy = getHeight() / 2F;
 		zoomTo( scale, cx, cy, durationMs );
 	}
+
+	public void centerTo( float centerX, float centerY ) {
+        Drawable d = getDrawable();
+        if (d == null) {
+            return;
+        }
+
+        float screenMidX = getWidth() / 2;
+        float screenMidY = getHeight() / 2;
+        
+        float dx = centerX - screenMidX;
+        float dy = centerY - screenMidY;
+
+        scrollBy(-dx, -dy, 500);
+	}	
+	
+	public void centerToImage(float centerX, float centerY) {
+		Drawable d = getDrawable();
+		float xp = 0;
+		float yp = 0;
+		
+		if (d == null) {
+			return; // nothing to do
+		}
+		// get the bitmap rect, which represents the rectangle of the view at
+		// the specified scale
+		// NOTE: this currently has no relation to the actual bitmap...we will
+		// provide that relation in this method
+		RectF rect = getBitmapRect();		
+		float screenMidX = getWidth() / 2;
+		float screenMidY = getHeight() / 2;
+		// determine the centerX and centerY of the image on screen (these
+		// coordinates are scaled image coordinates)
+		float viewCenterX = -(rect.left - screenMidX);
+		float viewCenterY = -(rect.top - screenMidY);
+
+		if (centerX >= 0) {
+			// NOTE: postTranslate expects - numbers to pull the image right and +
+			// to pull it left
+			
+			xp = viewCenterX - (centerX / d.getIntrinsicWidth()) * (rect.right - rect.left);
+		}
+		
+		if (centerY >= 0) {
+			yp = viewCenterY - (centerY / d.getIntrinsicHeight()) * (rect.bottom - rect.top);
+		}
+
+		scrollBy(xp, yp, 500);
+	}
+	
 
 	protected void zoomTo( float scale, float centerX, float centerY ) {
 		if ( scale > mMaxZoom ) scale = mMaxZoom;
@@ -501,42 +632,69 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 					mHandler.post( this );
 				} else {
 					RectF centerRect = getCenter( mSuppMatrix, true, true );
-					if ( centerRect.left != 0 || centerRect.top != 0 ) scrollBy( centerRect.left, centerRect.top );
+					if ( centerRect.left != 0 || centerRect.top != 0 )  scrollBy( centerRect.left, centerRect.top );
 				}
 			}
 		} );
 	}
 
-	protected void zoomTo( float scale, float centerX, float centerY, final float durationMs ) {
+	protected void zoomTo( float scale, final float centerX, final float centerY, final float durationMs ) {
+//		if ( scale > getMaxZoom() ) scale = getMaxZoom();
+//		final long startTime = System.currentTimeMillis();
+//		final float oldScale = getScale();
+//
+//		final float deltaScale = scale - oldScale;
+//
+//		Matrix m = new Matrix( mSuppMatrix );
+//		m.postScale( scale, scale, centerX, centerY );
+//		RectF rect = getCenter( m, true, true );
+//
+//		final float destX = centerX + rect.left * scale;
+//		final float destY = centerY + rect.top * scale;
+//
+//		mHandler.post( new Runnable() {
+//
+//			@Override
+//			public void run() {
+//				long now = System.currentTimeMillis();
+//				float currentMs = Math.min( durationMs, now - startTime );
+//				float newScale = (float) mEasing.easeInOut( currentMs, 0, deltaScale, durationMs );
+//				zoomTo( oldScale + newScale, destX, destY );
+//				if ( currentMs < durationMs ) {
+//					mHandler.post( this );
+//				} else {
+//					onZoomAnimationCompleted( getScale() );
+//					center( true, true );
+//				}
+//			}
+//		} );
 		if ( scale > getMaxZoom() ) scale = getMaxZoom();
+		
 		final long startTime = System.currentTimeMillis();
+		final float incrementPerMs = (scale - getScale()) / durationMs;
 		final float oldScale = getScale();
+		if (durationMs == 0) {
+			// special case for instantaneous zoom
+			zoomTo(scale, centerX, centerY);
+		} else {
+			mHandler.post(new Runnable() {
 
-		final float deltaScale = scale - oldScale;
-
-		Matrix m = new Matrix( mSuppMatrix );
-		m.postScale( scale, scale, centerX, centerY );
-		RectF rect = getCenter( m, true, true );
-
-		final float destX = centerX + rect.left * scale;
-		final float destY = centerY + rect.top * scale;
-
-		mHandler.post( new Runnable() {
-
-			@Override
-			public void run() {
-				long now = System.currentTimeMillis();
-				float currentMs = Math.min( durationMs, now - startTime );
-				float newScale = (float) mEasing.easeInOut( currentMs, 0, deltaScale, durationMs );
-				zoomTo( oldScale + newScale, destX, destY );
-				if ( currentMs < durationMs ) {
-					mHandler.post( this );
-				} else {
-					onZoomAnimationCompleted( getScale() );
-					center( true, true );
+				@Override
+				public void run() {
+					long now = System.currentTimeMillis();
+					float currentMs = Math.min(durationMs, now - startTime);
+					float target = oldScale + (incrementPerMs * currentMs);
+					zoomTo(target, centerX, centerY);
+					if (currentMs < durationMs) {
+						mHandler.post(this);
+					} else {
+						// if ( getScale() < 1f ) {}
+						onZoomAnimationCompleted(getScale());
+						center( true, true );
+					}
 				}
-			}
-		} );
+			});
+		}
 	}
 
 	@Override
