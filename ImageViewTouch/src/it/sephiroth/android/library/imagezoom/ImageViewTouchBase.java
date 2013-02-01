@@ -111,9 +111,6 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 
 	public void setMinZoom(float value) {
 		mMinZoom = value;
-		if (value == 1.0f) {
-			mUpdateZoomType = false;
-		}
 	}
 
 	@Override
@@ -133,12 +130,7 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 //			if (mUpdateZoomType) 
 			{
 				mUpdateZoomType = false;
-				int nCur = (int)getMinZoom();
-				int nValue = 1;
-				
-				if (nCur != nValue) {
-					getProperBaseMatrixInitial(getDrawable(), mBaseMatrix);
-				}
+				getProperBaseMatrixInitial(getDrawable(), mBaseMatrix);
 				setMinZoom(1.0f);
 			} 
 //			else {
