@@ -133,7 +133,7 @@ public class ImageViewTouch extends ImageViewTouchBase {
 			final boolean reset, final Matrix initial_matrix,
 			final float maxZoom) {
 		super._setImageDrawable(drawable, reset, initial_matrix, maxZoom);
-		mScaleFactor = getMaxZoom() / 4;
+		mScaleFactor = getMaxZoom() / 3;
 	}
 
 	@Override
@@ -410,8 +410,8 @@ public class ImageViewTouch extends ImageViewTouchBase {
 			//float span = detector.getCurrentSpan() - detector.getPreviousSpan();
 			float targetScale = mCurrentScaleFactor * detector.getScaleFactor();
 			if (mScaleEnabled) {
-				targetScale = Math.min(getMaxZoom(),
-						Math.max(targetScale, getMinZoom() - 0.1f));
+//				targetScale = Math.min(getMaxZoom(),
+//						Math.max(targetScale, getMinZoom() - 0.1f));
 				zoomTo(targetScale, detector.getFocusX(), detector.getFocusY());
 				mCurrentScaleFactor = Math.min(getMaxZoom(),
 						Math.max(targetScale, getMinZoom() - 1.0f));
@@ -433,9 +433,12 @@ public class ImageViewTouch extends ImageViewTouchBase {
 		@Override
 		public void onScaleEnd(ScaleGestureDetector detector) {
 			super.onScaleEnd(detector);
+			if (getScale() < getMinZoom()) {
+				zoomTo(getMinZoom(), 50);
+			}			
 			if (mTapListener != null) {
 				mTapListener.onImageScaling(false);
-			}			
+			}
 		}
 	}
 
