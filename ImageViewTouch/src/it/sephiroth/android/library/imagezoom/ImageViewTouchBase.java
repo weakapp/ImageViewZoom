@@ -22,7 +22,11 @@ import android.widget.ImageView;
 public class ImageViewTouchBase extends ImageView implements IDisposable {
 
 	private static enum IMAGE_ZOOM_TYPE {
-		ZOOM_TYPE_FIT_TO_SCRREN, ZOOM_TYPE_FIT_TO_WIDTH, ZOOM_TYPE_FIT_TO_HEIGHT, ZOOM_TYPE_FILL_TO_SCRREN
+		ZOOM_TYPE_FIT_TO_SCRREN_SMALL,
+		ZOOM_TYPE_FIT_TO_SCRREN_BIG, 
+		ZOOM_TYPE_FIT_TO_WIDTH, 
+		ZOOM_TYPE_FIT_TO_HEIGHT, 
+		ZOOM_TYPE_FILL_TO_SCRREN
 	};
 
 	public interface OnBitmapChangedListener {
@@ -37,7 +41,7 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 	protected Handler mHandler = new Handler();
 	protected Runnable mOnLayoutRunnable = null;
 	protected float mMaxZoom;
-	protected float mMinZoom = -1;
+	protected float mMinZoom = 0.1f;
 	protected final Matrix mDisplayMatrix = new Matrix();
 	protected final float[] mMatrixValues = new float[9];
 	protected int mThisWidth = -1, mThisHeight = -1;
@@ -45,8 +49,7 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 	final protected float MAX_ZOOM = 2.0f;
 	final protected int DEFAULT_ANIMATION_DURATION = 200;
 
-	protected IMAGE_ZOOM_TYPE mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_SCRREN;
-	protected boolean mUpdateZoomType = false;
+	protected IMAGE_ZOOM_TYPE mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_SCRREN_SMALL;
 
 	protected RectF mBitmapRect = new RectF();
 	protected RectF mCenterRect = new RectF();
@@ -70,25 +73,32 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 
 	protected void init() {
 		setScaleType(ImageView.ScaleType.MATRIX);
-		mUpdateZoomType = true;
 	}
 
 	public void clear() {
 		setImageBitmap(null, true);
 	}
 
-	public void setFitToScreen() {
-		if (mImageZoomType != IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_SCRREN) {
-			mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_SCRREN;
-			mUpdateZoomType = true;
-			requestLayout();
+	public void setFitToScreen(boolean bSmall) {
+		if (bSmall) {
+			if (mImageZoomType != IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_SCRREN_SMALL) {
+				mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_SCRREN_SMALL;
+				mSuppMatrix.reset();
+				requestLayout();
+			}
+		} else {
+			if (mImageZoomType != IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_SCRREN_BIG) {
+				mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_SCRREN_BIG;
+				mSuppMatrix.reset();
+				requestLayout();
+			}
 		}
 	}
 
 	public void setFitToWidth() {
 		if (mImageZoomType != IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_WIDTH) {
 			mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_WIDTH;
-			mUpdateZoomType = true;
+			mSuppMatrix.reset();
 			requestLayout();
 		}
 	}
@@ -96,7 +106,7 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 	public void setFitToHeight() {
 		if (mImageZoomType != IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_HEIGHT) {
 			mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_HEIGHT;
-			mUpdateZoomType = true;
+			mSuppMatrix.reset();
 			requestLayout();
 		}
 	}
@@ -104,7 +114,7 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 	public void setFillScreen() {
 		if (mImageZoomType != IMAGE_ZOOM_TYPE.ZOOM_TYPE_FILL_TO_SCRREN) {
 			mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FILL_TO_SCRREN;
-			mUpdateZoomType = true;
+			mSuppMatrix.reset();
 			requestLayout();
 		}
 	}
@@ -129,7 +139,6 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 			
 //			if (mUpdateZoomType) 
 			{
-				mUpdateZoomType = false;
 				getProperBaseMatrixInitial(getDrawable(), mBaseMatrix);
 				setMinZoom(1.0f);
 			} 
@@ -313,7 +322,8 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 		if (mMinZoom < 0) {
 			mMinZoom = minZoom();
 		}
-		return mMinZoom;
+		//return mMinZoom;
+		return 0.1f;
 	}
 
 	public Matrix getImageViewMatrix() {
@@ -356,22 +366,37 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 
 		float widthScale = Math.min(viewWidth / w, mMaxZoom);
 		float heightScale = Math.min(viewHeight / h, mMaxZoom);
-		float scale = getScale();
+		float scale = 0.0f;
 
 		switch (mImageZoomType) {
-		case ZOOM_TYPE_FIT_TO_SCRREN:
+		case ZOOM_TYPE_FIT_TO_SCRREN_SMALL:
 			scale = Math.min(widthScale, heightScale);
 			widthScale = scale;
 			heightScale = scale;
 			break;
 
+		case ZOOM_TYPE_FIT_TO_SCRREN_BIG:
+			/** Landscape **/
+			if (viewWidth > viewHeight) {
+				scale = widthScale;
+				th = viewHeight;
+			} else {
+				scale = heightScale;
+				tw = -viewWidth;
+			}
+			widthScale = scale;
+			heightScale = scale;
+			
+			break;
+
 		case ZOOM_TYPE_FIT_TO_WIDTH:
 			heightScale = widthScale;
-			th = (viewHeight - h * heightScale);
+			th = viewHeight;
+
 			break;
 		case ZOOM_TYPE_FIT_TO_HEIGHT:
 			widthScale = heightScale;
-			tw = (viewWidth - w * widthScale);
+			tw = -viewWidth;
 			break;
 
 		default:
@@ -381,6 +406,7 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 		matrix.postScale(widthScale, heightScale);
 
 		matrix.postTranslate(tw, th);
+	
 	}
 
 	/**
@@ -442,6 +468,10 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 
 	public float getScale() {
 		return getScale(mSuppMatrix);
+	}
+	
+	public float getRealScale() {
+		return getScale(mBaseMatrix);
 	}
 
 	protected void center(boolean horizontal, boolean vertical) {
@@ -650,6 +680,10 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 
 		if (scale > getMaxZoom())
 			scale = getMaxZoom();
+		
+		if (scale < getMinZoom()) {
+			scale = getMinZoom();
+		}
 		
 		final long startTime = System.currentTimeMillis();
 		final float incrementPerMs = (scale - getScale()) / durationMs;
