@@ -31,6 +31,8 @@ public class ImageViewTouch extends ImageViewTouchBase {
 	protected boolean mScrollEnabled = true;
 	private OnImageViewTouchListener mTapListener = null;
 
+	
+	private boolean mEnabledScrollChangeImage = false;
 	/***
 	 * 
 	 * These data are for one hand scale.
@@ -85,6 +87,8 @@ public class ImageViewTouch extends ImageViewTouchBase {
 		/** Used for one hand scale **/
 		//mLongPressTimeout = ViewConfiguration.getLongPressTimeout();
 		mLongPressTimeout = 300;
+		
+		mEnabledScrollChangeImage = false;
 	}
 
 	public void setTapListener(OnImageViewTouchListener listener) {
@@ -129,7 +133,7 @@ public class ImageViewTouch extends ImageViewTouchBase {
 	}
 
 	@Override
-	protected void _setImageDrawable(final Drawable drawable,
+	protected void _setImageDrawable(final Drawable[] drawable,
 			final boolean reset, final Matrix initial_matrix,
 			final float maxZoom) {
 		super._setImageDrawable(drawable, reset, initial_matrix, maxZoom);
@@ -159,6 +163,7 @@ public class ImageViewTouch extends ImageViewTouchBase {
 				removeCallbacks(mLongPressRunnable);
 				bZoomState = false;
 			}
+			mEnabledScrollChangeImage = false;
 			break;
 
 		case MotionEvent.ACTION_DOWN:
@@ -194,6 +199,26 @@ public class ImageViewTouch extends ImageViewTouchBase {
 
 						if (dist >= mScaledTouchSlop) {
 							removeCallbacks(mLongPressRunnable);
+						}
+						
+						if (mEnabledScrollChangeImage) {
+							if (scrollX < -100) {
+								if (mDrawables[1] != null) {
+									if (mCurrentUseDrawable != 1) {
+										mCurrentUseDrawable = 1;
+										super.setImageDrawable(mDrawables, true, null, getMaxZoom());	
+										requestLayout();
+									}
+								}
+							} else if (scrollX > 100) {
+								if (mDrawables[0] != null) {
+									if (mCurrentUseDrawable != 0) {
+										mCurrentUseDrawable = 0;
+										super.setImageDrawable(mDrawables, true, null, getMaxZoom());	
+										requestLayout();
+									}
+								}
+							}
 						}
 					}
 					mY = y;
@@ -310,26 +335,51 @@ public class ImageViewTouch extends ImageViewTouchBase {
 	 * 
 	 * @return true if there is some more place to scroll, false - otherwise.
 	 */
-	public boolean canScroll(int direction) {
+	public boolean canScroll(int direction, int x) {
 		RectF bitmapRect = getBitmapRect();
 		updateRect(bitmapRect, mScrollRect);
 		Rect imageViewRect = new Rect();
+		
 		getGlobalVisibleRect(imageViewRect);
 
 		if (bitmapRect.right >= imageViewRect.right) {
 			if (direction < 0) {
-				return Math.abs(bitmapRect.right - imageViewRect.right) > SCROLL_DELTA_THRESHOLD;
+				boolean ret = Math.abs(bitmapRect.right - imageViewRect.right) > SCROLL_DELTA_THRESHOLD;
+				if (!ret) {
+					if (mDrawables[0] != null) {
+						if (mCurrentUseDrawable != 0) {
+							mEnabledScrollChangeImage = true;
+							return true;
+						}
+					}
+				}
+				return ret;
 			}
 		}
 
 		double bitmapScrollRectDelta = Math.abs(bitmapRect.left
 				- mScrollRect.left);
-		return bitmapScrollRectDelta > SCROLL_DELTA_THRESHOLD;
+		
+		boolean ret = bitmapScrollRectDelta > SCROLL_DELTA_THRESHOLD;
+
+		if (!ret) {
+			if (mDrawables[1] != null) {
+				if (direction > 0) {
+					if (mCurrentUseDrawable != 1) {
+						mEnabledScrollChangeImage = true;
+						return true;
+					}
+				}
+			}
+		}
+		return ret; 
 	}
 
 	public class GestureListener extends
 			GestureDetector.SimpleOnGestureListener {
 
+		
+		
 		@Override
 		public boolean onDoubleTap(MotionEvent e) {
 			boolean ret = false;
