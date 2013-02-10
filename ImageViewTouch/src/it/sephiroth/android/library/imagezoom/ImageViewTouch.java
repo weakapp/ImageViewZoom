@@ -16,6 +16,8 @@ import android.view.ViewConfiguration;
 public class ImageViewTouch extends ImageViewTouchBase {
 
 	static final float SCROLL_DELTA_THRESHOLD = 1.0f;
+	
+	private final static int SCROLL_SINGLE_PAGE_MARGIN = 75;
 
 	protected ScaleGestureDetector mScaleDetector;
 	protected GestureDetector mGestureDetector;
@@ -202,7 +204,7 @@ public class ImageViewTouch extends ImageViewTouchBase {
 						}
 						
 						if (mEnabledScrollChangeImage) {
-							if (scrollX < -100) {
+							if (scrollX < (-1*SCROLL_SINGLE_PAGE_MARGIN)) {
 								if (mDrawables[1] != null) {
 									if (mCurrentUseDrawable != 1) {
 										mCurrentUseDrawable = 1;
@@ -210,7 +212,7 @@ public class ImageViewTouch extends ImageViewTouchBase {
 										requestLayout();
 									}
 								}
-							} else if (scrollX > 100) {
+							} else if (scrollX > SCROLL_SINGLE_PAGE_MARGIN) {
 								if (mDrawables[0] != null) {
 									if (mCurrentUseDrawable != 0) {
 										mCurrentUseDrawable = 0;
