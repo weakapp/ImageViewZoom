@@ -341,12 +341,23 @@ public class ImageViewTouch extends ImageViewTouchBase {
 		RectF bitmapRect = getBitmapRect();
 		updateRect(bitmapRect, mScrollRect);
 		Rect imageViewRect = new Rect();
-		
+
 		getGlobalVisibleRect(imageViewRect);
 
-		if (bitmapRect.right >= imageViewRect.right) {
-			if (direction < 0) {
+		if (direction < 0) {
+			if (bitmapRect.right >= imageViewRect.right) {
 				boolean ret = Math.abs(bitmapRect.right - imageViewRect.right) > SCROLL_DELTA_THRESHOLD;
+				if (!ret) {
+					if (mDrawables[0] != null) {
+						if (mCurrentUseDrawable != 0) {
+							mEnabledScrollChangeImage = true;
+							return true;
+						}
+					}
+				}
+				return ret;
+			} else {
+				boolean ret = Math.abs(bitmapRect.right - imageViewRect.right) < SCROLL_DELTA_THRESHOLD;
 				if (!ret) {
 					if (mDrawables[0] != null) {
 						if (mCurrentUseDrawable != 0) {
@@ -361,12 +372,11 @@ public class ImageViewTouch extends ImageViewTouchBase {
 
 		double bitmapScrollRectDelta = Math.abs(bitmapRect.left
 				- mScrollRect.left);
-		
-		boolean ret = bitmapScrollRectDelta > SCROLL_DELTA_THRESHOLD;
 
-		if (!ret) {
-			if (mDrawables[1] != null) {
-				if (direction > 0) {
+		if (direction > 0) {
+			boolean ret = bitmapScrollRectDelta > SCROLL_DELTA_THRESHOLD;
+			if (!ret) {
+				if (mDrawables[1] != null) {
 					if (mCurrentUseDrawable != 1) {
 						mEnabledScrollChangeImage = true;
 						return true;
@@ -374,7 +384,8 @@ public class ImageViewTouch extends ImageViewTouchBase {
 				}
 			}
 		}
-		return ret; 
+
+		return false;
 	}
 
 	public class GestureListener extends
