@@ -341,12 +341,13 @@ public class ImageViewTouch extends ImageViewTouchBase {
 		RectF bitmapRect = getBitmapRect();
 		updateRect(bitmapRect, mScrollRect);
 		Rect imageViewRect = new Rect();
-
+		boolean ret = false;
+		
 		getGlobalVisibleRect(imageViewRect);
 
 		if (direction < 0) {
 			if (bitmapRect.right >= imageViewRect.right) {
-				boolean ret = Math.abs(bitmapRect.right - imageViewRect.right) > SCROLL_DELTA_THRESHOLD;
+				ret = Math.abs(bitmapRect.right - imageViewRect.right) > SCROLL_DELTA_THRESHOLD;
 				if (!ret) {
 					if (mDrawables[0] != null) {
 						if (mCurrentUseDrawable != 0) {
@@ -357,7 +358,7 @@ public class ImageViewTouch extends ImageViewTouchBase {
 				}
 				return ret;
 			} else {
-				boolean ret = Math.abs(bitmapRect.right - imageViewRect.right) < SCROLL_DELTA_THRESHOLD;
+				ret = Math.abs(bitmapRect.right - imageViewRect.right) < SCROLL_DELTA_THRESHOLD;
 				if (!ret) {
 					if (mDrawables[0] != null) {
 						if (mCurrentUseDrawable != 0) {
@@ -374,7 +375,8 @@ public class ImageViewTouch extends ImageViewTouchBase {
 				- mScrollRect.left);
 
 		if (direction > 0) {
-			boolean ret = bitmapScrollRectDelta > SCROLL_DELTA_THRESHOLD;
+			ret = bitmapScrollRectDelta > SCROLL_DELTA_THRESHOLD;
+
 			if (!ret) {
 				if (mDrawables[1] != null) {
 					if (mCurrentUseDrawable != 1) {
@@ -385,7 +387,7 @@ public class ImageViewTouch extends ImageViewTouchBase {
 			}
 		}
 
-		return false;
+		return ret;
 	}
 
 	public class GestureListener extends

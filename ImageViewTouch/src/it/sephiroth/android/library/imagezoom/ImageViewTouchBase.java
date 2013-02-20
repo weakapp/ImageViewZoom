@@ -429,10 +429,10 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 			/** Landscape **/
 			if (viewWidth > viewHeight) {
 				scale = widthScale;
-				th = viewHeight;
+				th = h;
 			} else {
 				scale = heightScale;
-				tw = -viewWidth;
+				tw = -w;
 			}
 			widthScale = scale;
 			heightScale = scale;
@@ -441,12 +441,11 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 
 		case ZOOM_TYPE_FIT_TO_WIDTH:
 			heightScale = widthScale;
-			th = viewHeight;
-
+			th = h;
 			break;
 		case ZOOM_TYPE_FIT_TO_HEIGHT:
 			widthScale = heightScale;
-			tw = -viewWidth;
+			tw = -w;
 			break;
 
 		default:
