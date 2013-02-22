@@ -346,46 +346,54 @@ public class ImageViewTouch extends ImageViewTouchBase {
 		getGlobalVisibleRect(imageViewRect);
 
 		if (direction < 0) {
-			if (bitmapRect.right >= imageViewRect.right) {
-				ret = Math.abs(bitmapRect.right - imageViewRect.right) > SCROLL_DELTA_THRESHOLD;
+			
+			if ((bitmapRect != null) && (imageViewRect != null)) {
+				if (bitmapRect.right >= imageViewRect.right) {
+					ret = Math.abs(bitmapRect.right - imageViewRect.right) > SCROLL_DELTA_THRESHOLD;
+					if (!ret) {
+						if (mDrawables[0] != null) {
+							if (mCurrentUseDrawable != 0) {
+								mEnabledScrollChangeImage = true;
+								return true;
+							}
+						}
+					}
+					return ret;
+				} else {
+					ret = Math.abs(bitmapRect.right - imageViewRect.right) < SCROLL_DELTA_THRESHOLD;
+					if (!ret) {
+						if (mDrawables[0] != null) {
+							if (mCurrentUseDrawable != 0) {
+								mEnabledScrollChangeImage = true;
+								return true;
+							}
+						}
+					}
+					return ret;
+				}
+			}
+			
+
+		}
+
+		if ((bitmapRect != null) && (mScrollRect != null)) {
+			double bitmapScrollRectDelta = Math.abs(bitmapRect.left
+					- mScrollRect.left);
+
+			if (direction > 0) {
+				ret = bitmapScrollRectDelta > SCROLL_DELTA_THRESHOLD;
+
 				if (!ret) {
-					if (mDrawables[0] != null) {
-						if (mCurrentUseDrawable != 0) {
+					if (mDrawables[1] != null) {
+						if (mCurrentUseDrawable != 1) {
 							mEnabledScrollChangeImage = true;
 							return true;
 						}
 					}
 				}
-				return ret;
-			} else {
-				ret = Math.abs(bitmapRect.right - imageViewRect.right) < SCROLL_DELTA_THRESHOLD;
-				if (!ret) {
-					if (mDrawables[0] != null) {
-						if (mCurrentUseDrawable != 0) {
-							mEnabledScrollChangeImage = true;
-							return true;
-						}
-					}
-				}
-				return ret;
 			}
 		}
 
-		double bitmapScrollRectDelta = Math.abs(bitmapRect.left
-				- mScrollRect.left);
-
-		if (direction > 0) {
-			ret = bitmapScrollRectDelta > SCROLL_DELTA_THRESHOLD;
-
-			if (!ret) {
-				if (mDrawables[1] != null) {
-					if (mCurrentUseDrawable != 1) {
-						mEnabledScrollChangeImage = true;
-						return true;
-					}
-				}
-			}
-		}
 
 		return ret;
 	}
