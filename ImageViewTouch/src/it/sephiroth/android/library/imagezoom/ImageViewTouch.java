@@ -93,7 +93,12 @@ public class ImageViewTouch extends ImageViewTouchBase {
 		mEnabledScrollChangeImage = false;
 	}
 
-	public void setTapListener(OnImageViewTouchListener listener) {
+    @Override
+    public boolean isInEditMode() {
+        return false;
+    }
+
+    public void setTapListener(OnImageViewTouchListener listener) {
 		mTapListener = listener;
 	}
 
