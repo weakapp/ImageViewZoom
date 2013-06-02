@@ -6,6 +6,7 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.GestureDetector.OnGestureListener;
 import android.view.MotionEvent;
@@ -35,6 +36,7 @@ public class ImageViewTouch extends ImageViewTouchBase {
 
 	
 	private boolean mEnabledScrollChangeImage = false;
+    private boolean mL2R = false;
 	/***
 	 * 
 	 * These data are for one hand scale.
@@ -121,6 +123,10 @@ public class ImageViewTouch extends ImageViewTouchBase {
 	public boolean getDoubleTapEnabled() {
 		return mDoubleTapEnabled;
 	}
+
+    public void setScrollDirection(boolean l2R) {
+        this.mL2R = l2R;
+    }
 
 	protected OnGestureListener getGestureListener() {
 		return new GestureListener();
@@ -209,7 +215,24 @@ public class ImageViewTouch extends ImageViewTouchBase {
 						}
 						
 						if (mEnabledScrollChangeImage) {
-							if (scrollX < (-1*SCROLL_SINGLE_PAGE_MARGIN)) {
+                            boolean next = false;
+                            boolean prev = false;
+
+                            if (mL2R) {
+                                if (scrollX < (-1*SCROLL_SINGLE_PAGE_MARGIN)) {
+                                    prev = true;
+                                } else if (scrollX > SCROLL_SINGLE_PAGE_MARGIN) {
+                                    next = true;
+                                }
+                            } else {
+                                if (scrollX < (-1*SCROLL_SINGLE_PAGE_MARGIN)) {
+                                    next = true;
+                                } else if (scrollX > SCROLL_SINGLE_PAGE_MARGIN) {
+                                    prev = true;
+                                }
+                            }
+
+							if (next) {
 								if (mDrawables[1] != null) {
 									if (mCurrentUseDrawable != 1) {
 										mCurrentUseDrawable = 1;
@@ -217,7 +240,7 @@ public class ImageViewTouch extends ImageViewTouchBase {
 										requestLayout();
 									}
 								}
-							} else if (scrollX > SCROLL_SINGLE_PAGE_MARGIN) {
+							} else if (prev) {
 								if (mDrawables[0] != null) {
 									if (mCurrentUseDrawable != 0) {
 										mCurrentUseDrawable = 0;
@@ -350,35 +373,53 @@ public class ImageViewTouch extends ImageViewTouchBase {
 		
 		getGlobalVisibleRect(imageViewRect);
 
+
+        Log.e("TTTTTTTTTTTTTTTTTTTTTT", "direction: " + direction);
+
 		if (direction < 0) {
-			
 			if ((bitmapRect != null) && (imageViewRect != null)) {
 				if (bitmapRect.right >= imageViewRect.right) {
 					ret = Math.abs(bitmapRect.right - imageViewRect.right) > SCROLL_DELTA_THRESHOLD;
 					if (!ret) {
-						if (mDrawables[0] != null) {
-							if (mCurrentUseDrawable != 0) {
-								mEnabledScrollChangeImage = true;
-								return true;
-							}
-						}
+                        if (mL2R) {
+                            if (mDrawables[1] != null) {
+                                if (mCurrentUseDrawable != 1) {
+                                    mEnabledScrollChangeImage = true;
+                                    return true;
+                                }
+                            }
+                        } else {
+                            if (mDrawables[0] != null) {
+                                if (mCurrentUseDrawable != 0) {
+                                    mEnabledScrollChangeImage = true;
+                                    return true;
+                                }
+                            }
+                        }
 					}
 					return ret;
 				} else {
 					ret = Math.abs(bitmapRect.right - imageViewRect.right) < SCROLL_DELTA_THRESHOLD;
 					if (!ret) {
-						if (mDrawables[0] != null) {
-							if (mCurrentUseDrawable != 0) {
-								mEnabledScrollChangeImage = true;
-								return true;
-							}
-						}
+                        if (mL2R) {
+                            if (mDrawables[1] != null) {
+                                if (mCurrentUseDrawable != 1) {
+                                    mEnabledScrollChangeImage = true;
+                                    return true;
+                                }
+                            }
+                        } else {
+                            if (mDrawables[0] != null) {
+                                if (mCurrentUseDrawable != 0) {
+                                    mEnabledScrollChangeImage = true;
+                                    return true;
+                                }
+                            }
+                        }
 					}
 					return ret;
 				}
 			}
-			
-
 		}
 
 		if ((bitmapRect != null) && (mScrollRect != null)) {
@@ -389,12 +430,21 @@ public class ImageViewTouch extends ImageViewTouchBase {
 				ret = bitmapScrollRectDelta > SCROLL_DELTA_THRESHOLD;
 
 				if (!ret) {
-					if (mDrawables[1] != null) {
-						if (mCurrentUseDrawable != 1) {
-							mEnabledScrollChangeImage = true;
-							return true;
-						}
-					}
+                    if (mL2R) {
+                        if (mDrawables[0] != null) {
+                            if (mCurrentUseDrawable != 0) {
+                                mEnabledScrollChangeImage = true;
+                                return true;
+                            }
+                        }
+                    } else {
+                        if (mDrawables[1] != null) {
+                            if (mCurrentUseDrawable != 1) {
+                                mEnabledScrollChangeImage = true;
+                                return true;
+                            }
+                        }
+                    }
 				}
 			}
 		}
