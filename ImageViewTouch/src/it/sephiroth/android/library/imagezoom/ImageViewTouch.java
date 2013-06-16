@@ -373,9 +373,6 @@ public class ImageViewTouch extends ImageViewTouchBase {
 		
 		getGlobalVisibleRect(imageViewRect);
 
-
-        Log.e("TTTTTTTTTTTTTTTTTTTTTT", "direction: " + direction);
-
 		if (direction < 0) {
 			if ((bitmapRect != null) && (imageViewRect != null)) {
 				if (bitmapRect.right >= imageViewRect.right) {
