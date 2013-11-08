@@ -245,25 +245,34 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 		}
 	}
 
+    public void setImageBitmap2(final Bitmap leftBitmap, boolean reset) {
+        setImageBitmap2(null, leftBitmap, reset, 1);
+    }
+
 	public void setImageBitmap2(final Bitmap rightBitmap, final Bitmap leftBitmap, int useBitmap) {
-		int i = 0;
-		for (i = 0;i < mDrawables.length; i++) {
-			mDrawables[i] = null;
-			mBaseMatrixX[i].reset();
-		}
-		
-		if (rightBitmap != null) {
-			mDrawables[0] = new FastBitmapDrawable(rightBitmap);
-		}
-		
-		if (leftBitmap != null) {
-			mDrawables[1] = new FastBitmapDrawable(leftBitmap);
-		}
-
-		mCurrentUseDrawable = useBitmap;
-
-		setImageDrawable(mDrawables, true, null, 5.0f);
+        setImageBitmap2(rightBitmap, leftBitmap, true, useBitmap);
 	}
+
+    public void setImageBitmap2(final Bitmap rightBitmap, final Bitmap leftBitmap, boolean reset, int useBitmap) {
+        int i = 0;
+        for (i = 0;i < mDrawables.length; i++) {
+            mDrawables[i] = null;
+            mBaseMatrixX[i].reset();
+        }
+
+        if (rightBitmap != null) {
+            mDrawables[0] = new FastBitmapDrawable(rightBitmap);
+        }
+
+        if (leftBitmap != null) {
+            mDrawables[1] = new FastBitmapDrawable(leftBitmap);
+        }
+
+        mCurrentUseDrawable = useBitmap;
+
+        setImageDrawable(mDrawables, reset, null, 5.0f);
+        forceLayout();
+    }
 
 	@Override
 	public void setImageDrawable(Drawable drawable) {
