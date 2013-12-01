@@ -11,6 +11,7 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.widget.ImageView;
 
 /**
@@ -52,7 +53,7 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 	protected final float[] mMatrixValues = new float[9];
 	protected int mThisWidth = -1, mThisHeight = -1;
 
-	final protected float MAX_ZOOM = 2.0f;
+	final protected float MAX_ZOOM = 5.0f;
 	final protected int DEFAULT_ANIMATION_DURATION = 200;
 
 	protected IMAGE_ZOOM_TYPE mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_SCRREN_SMALL;
@@ -270,7 +271,7 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 
         mCurrentUseDrawable = useBitmap;
 
-        setImageDrawable(mDrawables, reset, null, 5.0f);
+        setImageDrawable(mDrawables, reset, null, -1f);
         forceLayout();
     }
 
@@ -365,8 +366,8 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 
 		float fw = (float) drawable.getIntrinsicWidth() / (float) mThisWidth;
 		float fh = (float) drawable.getIntrinsicHeight() / (float) mThisHeight;
-		 float max = Math.max( fw, fh ) * 4;
-		//float max = (1.0f / Math.min(fw, fh)) * 4;
+		//float max = Math.max( fw, fh ) * 4;
+		float max = (1.0f / Math.min(fw, fh)) * 4;
 		return max;
 	}
 
