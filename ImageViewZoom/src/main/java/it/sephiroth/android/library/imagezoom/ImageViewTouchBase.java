@@ -11,7 +11,6 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.widget.ImageView;
 
 /**
@@ -42,8 +41,6 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 	protected Matrix[] mBaseMatrixX = {new Matrix(), new Matrix()};
 	protected Drawable[] mDrawables = {null, null};
 	protected int mCurrentUseDrawable = 0;
-
-	
 	
 	protected Handler mHandler = new Handler();
 	protected Runnable mOnLayoutRunnable = null;
@@ -53,7 +50,8 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 	protected final float[] mMatrixValues = new float[9];
 	protected int mThisWidth = -1, mThisHeight = -1;
 
-	final protected float MAX_ZOOM = 5.0f;
+    protected float mDefaultMaxZoom = -1f;
+    final protected float MAX_ZOOM = 3.0f;
 	final protected int DEFAULT_ANIMATION_DURATION = 200;
 
 	protected IMAGE_ZOOM_TYPE mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_SCRREN_SMALL;
@@ -85,6 +83,17 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 	public void clear() {
 		setImageBitmap(null, true);
 	}
+
+    public void setDefaultMaxZoom(float value) {
+        mDefaultMaxZoom = value;
+        if (mDefaultMaxZoom < 1f) {
+            mDefaultMaxZoom = 1f;
+        }
+    }
+
+    public float getDefaultMaxZoom() {
+        return mDefaultMaxZoom;
+    }
 
 	public void setFitToScreen(boolean bSmall) {
 		if (bSmall) {
@@ -364,10 +373,16 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 			return 1F;
 		}
 
-		float fw = (float) drawable.getIntrinsicWidth() / (float) mThisWidth;
-		float fh = (float) drawable.getIntrinsicHeight() / (float) mThisHeight;
-		//float max = Math.max( fw, fh ) * 4;
-		float max = (1.0f / Math.min(fw, fh)) * 4;
+        float max;
+        float fw = (float) drawable.getIntrinsicWidth() / (float) mThisWidth;
+        float fh = (float) drawable.getIntrinsicHeight() / (float) mThisHeight;
+        //float max = Math.max( fw, fh ) * 4;
+        max = (1.0f / Math.min(fw, fh)) * 4;
+
+        if (max > MAX_ZOOM) {
+            max = MAX_ZOOM;
+        }
+
 		return max;
 	}
 
