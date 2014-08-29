@@ -402,7 +402,8 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 			mMinZoom = minZoom();
 		}
 		//return mMinZoom;
-		return 0.1f;
+		//return 0.1f;
+        return MIN_ZOOM;
 	}
 
 	public Matrix getImageViewMatrix() {
