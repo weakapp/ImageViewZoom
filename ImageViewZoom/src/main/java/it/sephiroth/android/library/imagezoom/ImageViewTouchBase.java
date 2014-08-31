@@ -51,7 +51,7 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 	protected int mThisWidth = -1, mThisHeight = -1;
 
     protected float mDefaultMaxZoom = -1f;
-    final protected float MAX_ZOOM = 3.0f;
+    final protected float MAX_ZOOM = 10.0f;
 	final protected int DEFAULT_ANIMATION_DURATION = 200;
 
 	protected IMAGE_ZOOM_TYPE mImageZoomType = IMAGE_ZOOM_TYPE.ZOOM_TYPE_FIT_TO_SCRREN_SMALL;
@@ -378,11 +378,9 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
         float fh = (float) drawable.getIntrinsicHeight() / (float) mThisHeight;
         //float max = Math.max( fw, fh ) * 4;
         max = (1.0f / Math.min(fw, fh)) * 4;
-
         if (max > MAX_ZOOM) {
             max = MAX_ZOOM;
         }
-
 		return max;
 	}
 
