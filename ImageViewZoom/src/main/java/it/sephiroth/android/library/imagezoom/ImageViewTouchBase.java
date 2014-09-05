@@ -378,9 +378,9 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
         float fh = (float) drawable.getIntrinsicHeight() / (float) mThisHeight;
         //float max = Math.max( fw, fh ) * 4;
         max = (1.0f / Math.min(fw, fh)) * 4;
-        if (max > MAX_ZOOM) {
-            max = MAX_ZOOM;
-        }
+//        if (max > MAX_ZOOM) {
+//            max = MAX_ZOOM;
+//        }
 		return max;
 	}
 
