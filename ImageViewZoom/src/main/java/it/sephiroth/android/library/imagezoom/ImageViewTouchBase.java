@@ -347,6 +347,10 @@ public class ImageViewTouchBase extends ImageView implements IDisposable {
 		else
 			mMaxZoom = maxZoom;
 
+        if (getDefaultMaxZoom() > 0) {
+            mMaxZoom = getDefaultMaxZoom();
+        }
+
 		if (drawable == null) {
 			onBitmapChanged(null);
 		} else {
